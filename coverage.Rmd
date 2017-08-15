@@ -1,0 +1,62 @@
+---
+title: "ExomeCoverage"
+author: "Stephen Henderson"
+date: "7/4/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Coverage
+
+This code was adapted to a 'tidyverse' friendly version from theoriginal ideas on the [Getting Genetics Done Blog](http://www.gettinggeneticsdone.com/2014/03/visualize-coverage-exome-targeted-ngs-bedtools.html)
+
+
+The bash script `coverage.sh` to produce the initial coverage estimates for each indivdual sample is like so:
+
+```{bash}
+#!/bin/bash
+# usage:  nohup ./coverage.sh &
+
+CAPTURE_REGION="/mnt/store1/hg38/SeqCap_EZ_Exome_v3_hg19Tohg38.sorted.bed"
+BEDTOOLS="/home/rmgzshd/bedtools2/bin/bedtools"
+
+
+for BAM in *.bam
+do
+
+	$BEDTOOLS bamtobed -i $BAM | $BEDTOOLS coverage -hist -b - -a $CAPTURE_REGION | grep ^all > $BAM.hist.all.txt
+done
+
+```
+
+These filesare used to plot cumulative coverage. The greyed out code originally merged and processed the files created by the script above and saved it tot a single simple text file `coverageRegions.tsv`.   There are too too many overall Regions to label or colour code separately here.
+
+```{r coverage, message=FALSE, warning=FALSE}
+library(ggplot2)
+library(RColorBrewer)
+library(tidyverse)
+
+
+# load and parse the files
+#COVERAGE<-list.files(pattern="all.txt$") %>% 
+#  sapply(read_tsv, simplify=FALSE, col_names= FALSE) %>%
+#  bind_rows(.id = "id") %>%
+#  select(id, 3:6) %>%
+#  rename(covThreshold = X2, diffFracBelowThreshold = X5) %>%
+#  group_by(id) %>%
+#  mutate(fracAboveThreshold = 1 - cumsum(diffFracBelowThreshold))
+
+write_tsv(COVERAGE, "coverageRegions.tsv")
+COVERAGE<- read_tsv("coverageRegions.tsv")
+
+# plot the data
+maxCov=400
+theme_set(theme_bw())
+ggplot(subset(COVERAGE, covThreshold < maxCov), aes(x= covThreshold, y=fracAboveThreshold, group=id)) +  geom_line() + ylim(0, 1)
+
+```
+
+

@@ -16,7 +16,7 @@ This code was adapted to a 'tidyverse' friendly version from theoriginal ideas o
 
 The bash script `coverage.sh` to produce the initial coverage estimates for each indivdual sample is like so:
 
-```{bash}
+```
 #!/bin/bash
 # usage:  nohup ./coverage.sh &
 
@@ -27,7 +27,9 @@ BEDTOOLS="/home/rmgzshd/bedtools2/bin/bedtools"
 for BAM in *.bam
 do
 
-	$BEDTOOLS bamtobed -i $BAM | $BEDTOOLS coverage -hist -b - -a $CAPTURE_REGION | grep ^all > $BAM.hist.all.txt
+	$BEDTOOLS bamtobed -i $BAM | 
+	$BEDTOOLS coverage -hist -b - -a $CAPTURE_REGION |
+	grep ^all > $BAM.hist.all.txt
 done
 
 ```
@@ -49,7 +51,7 @@ library(tidyverse)
 #  group_by(id) %>%
 #  mutate(fracAboveThreshold = 1 - cumsum(diffFracBelowThreshold))
 
-write_tsv(COVERAGE, "coverageRegions.tsv")
+#write_tsv(COVERAGE, "coverageRegions.tsv")
 COVERAGE<- read_tsv("coverageRegions.tsv")
 
 # plot the data

@@ -14,17 +14,4 @@ knitr::opts_chunk$set(echo = TRUE)
 The SINET are Small Intestinal NeuroEndocrine Tumours. They have few mutations but may possibly have 
 
 
-
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+1. [Bamfile coverage](https://malarkey73.github.io/WEB/coverage.html)

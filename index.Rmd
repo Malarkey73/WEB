@@ -11,7 +11,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## SINET documents
 
-The SINET are Small Intestinal NeuroEndocrine Tumours. They have few mutations but may possibly have 
+The SINET are Small Intestinal NeuroEndocrine Tumours. They have few mutations but may possibly have epigenetic abnormalities (I hope).
 
-
-1. [Bamfile coverage](https://malarkey73.github.io/WEB/coverage.html)
+1. Details on the original exome Fastq files and how the replicates were merged(https://malarkey73.github.io/WEB/SINET_details.html) 
+2. [Bamfile coverage](https://malarkey73.github.io/WEB/coverage.html)
+3. 

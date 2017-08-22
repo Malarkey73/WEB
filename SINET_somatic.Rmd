@@ -3,85 +3,78 @@ title: "SINET_somatic"
 author: "Stephen Henderson"
 date: "7/21/2017"
 output: html_document
-runtime: shiny
-resource_files:
-- P007A_T.snp.Somatic
-- P120_T.snp.Somatic
-- P491_T.snp.Somatic
-- P1634_T.snp.Somatic
-- P2112_T.snp.Somatic
-- P2575_T.snp.Somatic
-- P2765_T.snp.Somatic
-- P3189_T.snp.Somatic
-- P3405_T.snp.Somatic
----
 
-```{r setup, include=FALSE}
-
-library(knitr)
-#library(svglite)
-#knitr::opts_chunk$set(dev = "svglite", fig.ext = ".svg")
-
-library(animation)
-ani.options(autobrowse = FALSE)
-
-opts_knit$set(animation.fun = function(x, options, format = "gif") {
-  x = c(knitr:::sans_ext(x), knitr:::file_ext(x))
-  fig.num = options$fig.num
-  format = sub("^[.]", "", format)
-  fig.fname = paste0(sub(paste0(fig.num, "$"), "*", x[1]), 
-                     ".", x[2])
-  mov.fname = paste0(sub(paste0(fig.num, "$"), "", x[1]), ".", 
-                     format)
-
-  # order correctly
-  figs <- Sys.glob(fig.fname)
-  figs <- figs[order(as.numeric(stringr::str_match(figs, paste0("(\\d+)\\.", x[2]))[, 2]))]
-
-  animation::im.convert(figs, output = mov.fname)
-
-  sprintf("![%s](%s)", options$label, paste0(opts_knit$get("base.url"), mov.fname))
-})
-
-knitr::opts_chunk$set(cache = TRUE, warning = FALSE, message = FALSE, fig.show = "animate")
-options(width=80)
-
-```
 
 ### Somatic Variants in SINET 
 
 The VARSCAN pipeline was largely adapted from the  
 
 ```{r loading, message=FALSE, warning=FALSE}
-#setwd("~/Desktop/SINET")
+
 library(tidyverse)
 library(stringr)
-TUMVARSOM<- list.files(pattern=".Somatic") %>% 
+
+PATIENTVARSOM<- list.files(pattern="_T.snp.Somatic") %>% 
   sapply(read_tsv, simplify=FALSE) %>%
   bind_rows(.id = "id") %>%
   mutate(id = str_replace(id, "_T.snp.Somatic", "")) %>%
-  #separate(col = id, into= c("Patient", "Region"), sep="_") %>%
-  mutate(normal_var_freq= str_replace(normal_var_freq, "%", ""), tumor_var_freq= str_replace(tumor_var_freq, "%", "")) %>%
-  mutate(normal_var_freq = as.numeric(normal_var_freq), tumor_var_freq = as.numeric(tumor_var_freq))
+  mutate(normal_var_freq = str_replace(normal_var_freq, "%", ""), 
+         tumor_var_freq= str_replace(tumor_var_freq, "%", "")) %>%
+  mutate(normal_var_freq = as.numeric(normal_var_freq), 
+         tumor_var_freq = as.numeric(tumor_var_freq))
 
+REGIONVARSOM<- list.files(pattern="R*T.snp.Somatic") %>% 
+  sapply(read_tsv, simplify=FALSE) %>%
+  bind_rows(.id = "id") %>%
+  mutate(id = str_replace(id, "_T.snp.Somatic", "")) %>%
+  mutate(normal_var_freq= str_replace(normal_var_freq, "%", ""), 
+         tumor_var_freq= str_replace(tumor_var_freq, "%", "")) %>%
+  mutate(normal_var_freq = as.numeric(normal_var_freq), 
+         tumor_var_freq = as.numeric(tumor_var_freq))
 
-SHINY <- TUMVARSOM %>% group_by(chrom, position) %>% summarise(N = n(), normal_reads1 = mean(normal_reads1), normal_reads2 = mean(normal_reads2), normal_var_freq = mean(normal_var_freq), tumor_var_freq = mean(tumor_var_freq), tumor_reads1 = mean(tumor_reads1), tumor_reads2 =  mean(tumor_reads2))  %>% arrange(desc(N), desc(tumor_reads2-normal_reads2))
+PATIENTVARSOM %<>% 
+  group_by(chrom, position) %>% 
+  summarise(N = n(), 
+            normal_reads1 = mean(normal_reads1), 
+            normal_reads2 = mean(normal_reads2), 
+            normal_var_freq = mean(normal_var_freq), 
+            tumor_var_freq = mean(tumor_var_freq), 
+            tumor_reads1 = mean(tumor_reads1), 
+            tumor_reads2 =  mean(tumor_reads2))  %>% 
+  arrange(desc(N), 
+          desc(tumor_reads2 - normal_reads2))
+
+REGIONVARSOM %<>% 
+  group_by(chrom, position) %>% 
+  summarise(N = n(), 
+            normal_reads1 = mean(normal_reads1), 
+            normal_reads2 = mean(normal_reads2), 
+            normal_var_freq = mean(normal_var_freq), 
+            tumor_var_freq = mean(tumor_var_freq), 
+            tumor_reads1 = mean(tumor_reads1), 
+            tumor_reads2 = mean(tumor_reads2))  %>% 
+  arrange(desc(N), 
+          desc(tumor_reads2 - normal_reads2))
 
 ```
 
 
 Plot the Variant frequency vs the Read Depth.
 
-```{r plotVarFrqDepth}
+```{r plotVarFrqDepth, message =FALSE, warning= FALSE}
 
 library(ggplot2)
-
-gg<- ggplot(SHINY, aes(x = tumor_var_freq, y= tumor_reads1 + tumor_reads2, frame= chrom)) +
+library(gganimate)
+gg<- ggplot(ANIM, aes(x = tumor_var_freq, y= tumor_reads1 + tumor_reads2, frame= chrom)) +
   geom_point() +
+  ylab("Tumour Depth") +
+  xlab("Tumour Variant Frequency") +
+  geom_hline(aes(yintercept=30), color="black", linetype="dashed") +
   theme_bw()
 
 #gg
 gganimate(gg)
+
 ```
 
 
@@ -92,14 +85,14 @@ Let's try interactive Shiny...
 
 ```{r shiny, cache= FALSE, echo = FALSE}
 
-numericInput("inp_tumor_var_freq", "Min Tumour Variant Frequency?", 15)
-numericInput("inp_tumor_reads", "Min Tumour Read Depth?", 30)
+#numericInput("inp_tumor_var_freq", "Min Tumour Variant Frequency?", 15)
+#numericInput("inp_tumor_reads", "Min Tumour Read Depth?", 30)
 
-renderTable({
-  filter(SHINY, 
-  tumor_var_freq > input$inp_tumor_var_freq,
-  (tumor_reads1 + tumor_reads2) > input$inp_tumor_reads
-  ) %>%
-    arrange(desc(tumor_reads2))
-})
+#renderTable({
+#  filter(SHINY, 
+#  tumor_var_freq > input$inp_tumor_var_freq,
+#  (tumor_reads1 + tumor_reads2) > input$inp_tumor_reads
+#  ) %>%
+#    arrange(desc(tumor_reads2))
+#})
 ```

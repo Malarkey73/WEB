@@ -4,12 +4,17 @@ author: "Stephen Henderson"
 date: "7/21/2017"
 output: html_document
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
 
 ### Somatic Variants in SINET 
 
 The VARSCAN pipeline was largely adapted from the  
 
-```{r loading, message=FALSE, warning=FALSE}
+This section merged together the files from the 
+
+```{r dataparsing, message=FALSE, warning=FALSE, eval =FALSE}
 
 library(tidyverse)
 library(stringr)
@@ -23,14 +28,39 @@ PATIENTVARSOM<- list.files(pattern="_T.snp.Somatic") %>%
   mutate(normal_var_freq = as.numeric(normal_var_freq), 
          tumor_var_freq = as.numeric(tumor_var_freq))
 
+PATIENTVARSOM.GR<- GRanges(seqnames = Rle(PATIENTVARSOM$chrom),
+                            ranges = IRanges(PATIENTVARSOM$position, width=1)
+
+)
+
+mcols(PATIENTVARSOM.GR)$REF <- DNAStringSet(PATIENTVARSOM$ref)
+mcols(PATIENTVARSOM.GR)$ALT <- DNAStringSetList(as.list(PATIENTVARSOM$var))
+mcols(PATIENTVARSOM.GR)$PATIENT <- PATIENTVARSOM$id
+
+
+
+
 REGIONVARSOM<- list.files(pattern="R*T.snp.Somatic") %>% 
   sapply(read_tsv, simplify=FALSE) %>%
   bind_rows(.id = "id") %>%
-  mutate(id = str_replace(id, "_T.snp.Somatic", "")) %>%
+  mutate(id = str_replace(id, ".snp.Somatic", "")) %>%
+  separate(id, into = c("patient_id", "region_id"), sep ="_") %>%
   mutate(normal_var_freq= str_replace(normal_var_freq, "%", ""), 
          tumor_var_freq= str_replace(tumor_var_freq, "%", "")) %>%
   mutate(normal_var_freq = as.numeric(normal_var_freq), 
          tumor_var_freq = as.numeric(tumor_var_freq))
+         
+REGIONVARSOM.GR<- GRanges(seqnames = Rle(REGIONVARSOM$chrom),
+                            ranges = IRanges(REGIONVARSOM$position, width=1)
+
+)
+
+mcols(REGIONVARSOM.GR)$REF <- DNAStringSet(REGIONVARSOM$ref)
+mcols(REGIONVARSOM.GR)$ALT <- DNAStringSetList(as.list(REGIONVARSOM$var))
+mcols(REGIONVARSOM.GR)$PATIENTID <- REGIONVARSOM$patient_id
+mcols(REGIONVARSOM.GR)$REGIONID <- REGIONVARSOM$region_id
+
+####
 
 PATIENTVARSOM %<>% 
   group_by(chrom, position) %>% 
@@ -55,9 +85,21 @@ REGIONVARSOM %<>%
             tumor_reads2 = mean(tumor_reads2))  %>% 
   arrange(desc(N), 
           desc(tumor_reads2 - normal_reads2))
+          
+  write_tsv(REGIONVARSOM, "Region.Somatic.snp.tsv")
+  write_tsv(PATIENTVARSOM, "Patient.Somatic.snp.tsv")
 
 ```
 
+
+```{r dataload, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(TxDb.Hsapiens.UCSC.hg38.knownGene)
+REGIONVARSOM <- read_tsv("Region.Somatic.snp.tsv")
+PATIENTVARSOM <- read_tsv("Patient.Somatic.snp.tsv")
+txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene
+
+```
 
 Plot the Variant frequency vs the Read Depth.
 

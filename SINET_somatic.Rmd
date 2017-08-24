@@ -6,6 +6,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
 ```
 
 ### Somatic Variants in SINET 
@@ -18,8 +19,9 @@ This section merged together the files from the
 
 library(tidyverse)
 library(stringr)
+library(Biostrings)
 
-PATIENTVARSOM<- list.files(pattern="_T.snp.Somatic") %>% 
+PATIENTVARSOM <- list.files(pattern="_T.snp.Somatic") %>% 
   sapply(read_tsv, simplify=FALSE) %>%
   bind_rows(.id = "id") %>%
   mutate(id = str_replace(id, "_T.snp.Somatic", "")) %>%
@@ -29,14 +31,23 @@ PATIENTVARSOM<- list.files(pattern="_T.snp.Somatic") %>%
          tumor_var_freq = as.numeric(tumor_var_freq))
 
 PATIENTVARSOM.GR<- GRanges(seqnames = Rle(PATIENTVARSOM$chrom),
-                            ranges = IRanges(PATIENTVARSOM$position, width=1)
-
-)
+                            ranges = IRanges(PATIENTVARSOM$position, width=1))
 
 mcols(PATIENTVARSOM.GR)$REF <- DNAStringSet(PATIENTVARSOM$ref)
 mcols(PATIENTVARSOM.GR)$ALT <- DNAStringSetList(as.list(PATIENTVARSOM$var))
 mcols(PATIENTVARSOM.GR)$PATIENT <- PATIENTVARSOM$id
 
+library(TxDb.Hsapiens.UCSC.hg38.knownGene)
+txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene
+PATIENTVARSOM.ANNO <- locateVariants(PATIENTVARSOM.GR, txdb, CodingVariants()) %>%
+  unique() %>%
+  as.data.frame() %>%
+  as.tbl()
+  
+
+PATIENTVARSOM <- PATIENTVARSOM.ANNO %>% 
+  dplyr::select(chrom = seqnames, position = start, EntrezID = GENEID, Variant_Type = LOCATION, Variant_Location = LOCSTART) %>%
+  right_join(PATIENTVARSOM)
 
 
 
@@ -57,47 +68,29 @@ REGIONVARSOM.GR<- GRanges(seqnames = Rle(REGIONVARSOM$chrom),
 
 mcols(REGIONVARSOM.GR)$REF <- DNAStringSet(REGIONVARSOM$ref)
 mcols(REGIONVARSOM.GR)$ALT <- DNAStringSetList(as.list(REGIONVARSOM$var))
-mcols(REGIONVARSOM.GR)$PATIENTID <- REGIONVARSOM$patient_id
-mcols(REGIONVARSOM.GR)$REGIONID <- REGIONVARSOM$region_id
+mcols(REGIONVARSOM.GR)$PATIENT <- REGIONVARSOM$patient_id
+mcols(REGIONVARSOM.GR)$REGION <- REGIONVARSOM$region_id
 
-####
+REGIONVARSOM.ANNO <- locateVariants(REGIONVARSOM.GR, txdb, CodingVariants()) %>%
+  unique() %>%
+  as.data.frame() %>%
+  as.tbl()
+  
 
-PATIENTVARSOM %<>% 
-  group_by(chrom, position) %>% 
-  summarise(N = n(), 
-            normal_reads1 = mean(normal_reads1), 
-            normal_reads2 = mean(normal_reads2), 
-            normal_var_freq = mean(normal_var_freq), 
-            tumor_var_freq = mean(tumor_var_freq), 
-            tumor_reads1 = mean(tumor_reads1), 
-            tumor_reads2 =  mean(tumor_reads2))  %>% 
-  arrange(desc(N), 
-          desc(tumor_reads2 - normal_reads2))
+REGIONVARSOM <- REGIONVARSOM.ANNO %>% 
+  dplyr::select(chrom = seqnames, position = start, EntrezID = GENEID, Variant_Type = LOCATION, Variant_Location = LOCSTART) %>%
+  right_join(REGIONVARSOM)
 
-REGIONVARSOM %<>% 
-  group_by(chrom, position) %>% 
-  summarise(N = n(), 
-            normal_reads1 = mean(normal_reads1), 
-            normal_reads2 = mean(normal_reads2), 
-            normal_var_freq = mean(normal_var_freq), 
-            tumor_var_freq = mean(tumor_var_freq), 
-            tumor_reads1 = mean(tumor_reads1), 
-            tumor_reads2 = mean(tumor_reads2))  %>% 
-  arrange(desc(N), 
-          desc(tumor_reads2 - normal_reads2))
-          
-  write_tsv(REGIONVARSOM, "Region.Somatic.snp.tsv")
-  write_tsv(PATIENTVARSOM, "Patient.Somatic.snp.tsv")
+write_tsv(REGIONVARSOM, "Region.Somatic.snp.tsv")
+write_tsv(PATIENTVARSOM, "Patient.Somatic.snp.tsv")
 
 ```
 
 
 ```{r dataload, message=FALSE, warning=FALSE}
 library(tidyverse)
-library(TxDb.Hsapiens.UCSC.hg38.knownGene)
 REGIONVARSOM <- read_tsv("Region.Somatic.snp.tsv")
 PATIENTVARSOM <- read_tsv("Patient.Somatic.snp.tsv")
-txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene
 
 ```
 

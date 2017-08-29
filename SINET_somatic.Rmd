@@ -39,17 +39,18 @@ mcols(PATIENTVARSOM.GR)$PATIENT <- PATIENTVARSOM$id
 
 library(TxDb.Hsapiens.UCSC.hg38.knownGene)
 txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene
+library(org.Hs.eg.db)
+e2s = toTable(org.Hs.egSYMBOL) 
+
 PATIENTVARSOM.ANNO <- locateVariants(PATIENTVARSOM.GR, txdb, CodingVariants()) %>%
   unique() %>%
   as.data.frame() %>%
   as.tbl()
   
-
-PATIENTVARSOM <- PATIENTVARSOM.ANNO %>% 
+PATIENTVARSOM <-  PATIENTVARSOM.ANNO %>% 
   dplyr::select(chrom = seqnames, position = start, EntrezID = GENEID, Variant_Type = LOCATION, Variant_Location = LOCSTART) %>%
-  right_join(PATIENTVARSOM)
-
-
+  right_join(PATIENTVARSOM) %>%
+  mutate(Symbol = e2s$symbol[match(EntrezID, e2s$gene_id)])
 
 REGIONVARSOM<- list.files(pattern="R*T.snp.Somatic") %>% 
   sapply(read_tsv, simplify=FALSE) %>%
@@ -79,11 +80,12 @@ REGIONVARSOM.ANNO <- locateVariants(REGIONVARSOM.GR, txdb, CodingVariants()) %>%
 
 REGIONVARSOM <- REGIONVARSOM.ANNO %>% 
   dplyr::select(chrom = seqnames, position = start, EntrezID = GENEID, Variant_Type = LOCATION, Variant_Location = LOCSTART) %>%
-  right_join(REGIONVARSOM)
+  right_join(REGIONVARSOM) %>%
+  mutate(Symbol = e2s$symbol[match(EntrezID, e2s$gene_id)])
 
 write_tsv(REGIONVARSOM, "Region.Somatic.snp.tsv")
 write_tsv(PATIENTVARSOM, "Patient.Somatic.snp.tsv")
-
+rm(txdb,e2s, PATIENTVARSOM.GR, REGIONVARSOM.GR, REGIONVARSOM.ANNO, PATIENTVARSOM.ANNO)
 ```
 
 
@@ -100,7 +102,7 @@ Plot the Variant frequency vs the Read Depth.
 
 library(ggplot2)
 library(gganimate)
-gg<- ggplot(ANIM, aes(x = tumor_var_freq, y= tumor_reads1 + tumor_reads2, frame= chrom)) +
+gg<- ggplot(REGIONVARSOM, aes(x = tumor_var_freq, y= tumor_reads1 + tumor_reads2, frame= chrom)) +
   geom_point() +
   ylab("Tumour Depth") +
   xlab("Tumour Variant Frequency") +
@@ -110,24 +112,8 @@ gg<- ggplot(ANIM, aes(x = tumor_var_freq, y= tumor_reads1 + tumor_reads2, frame=
 #gg
 gganimate(gg)
 
+
+ REGIONVARSOM %>% dplyr::select(1:11, 14:15, Symbol, tumor_var_freq) %>% arrange(desc(tumor_var_freq)) %>% filter(tumor_reads2 > 13)
+ 
 ```
 
-
-### Interactive
-
-Let's try interactive Shiny...
-
-
-```{r shiny, cache= FALSE, echo = FALSE}
-
-#numericInput("inp_tumor_var_freq", "Min Tumour Variant Frequency?", 15)
-#numericInput("inp_tumor_reads", "Min Tumour Read Depth?", 30)
-
-#renderTable({
-#  filter(SHINY, 
-#  tumor_var_freq > input$inp_tumor_var_freq,
-#  (tumor_reads1 + tumor_reads2) > input$inp_tumor_reads
-#  ) %>%
-#    arrange(desc(tumor_reads2))
-#})
-```

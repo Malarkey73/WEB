@@ -21,10 +21,10 @@ library(tidyverse)
 library(stringr)
 library(Biostrings)
 
-PATIENTVARSOM <- list.files(pattern="_T.snp.Somatic") %>% 
+PATIENTVARSOM <- list.files(pattern="_T.snp.Somatic.somaticFilter") %>% 
   sapply(read_tsv, simplify=FALSE) %>%
   bind_rows(.id = "id") %>%
-  mutate(id = str_replace(id, "_T.snp.Somatic", "")) %>%
+  mutate(id = str_replace(id, "_T.snp.Somatic.somaticFilter", "")) %>%
   mutate(normal_var_freq = str_replace(normal_var_freq, "%", ""), 
          tumor_var_freq= str_replace(tumor_var_freq, "%", "")) %>%
   mutate(normal_var_freq = as.numeric(normal_var_freq), 
@@ -52,10 +52,10 @@ PATIENTVARSOM <-  PATIENTVARSOM.ANNO %>%
   right_join(PATIENTVARSOM) %>%
   mutate(Symbol = e2s$symbol[match(EntrezID, e2s$gene_id)])
 
-REGIONVARSOM<- list.files(pattern="R*T.snp.Somatic") %>% 
+REGIONVARSOM<- list.files(pattern="R..T.snp.Somatic.somaticFilter") %>% 
   sapply(read_tsv, simplify=FALSE) %>%
   bind_rows(.id = "id") %>%
-  mutate(id = str_replace(id, ".snp.Somatic", "")) %>%
+  mutate(id = str_replace(id, ".snp.Somatic.somaticFilter", "")) %>%
   separate(id, into = c("patient_id", "region_id"), sep ="_") %>%
   mutate(normal_var_freq= str_replace(normal_var_freq, "%", ""), 
          tumor_var_freq= str_replace(tumor_var_freq, "%", "")) %>%
@@ -63,9 +63,7 @@ REGIONVARSOM<- list.files(pattern="R*T.snp.Somatic") %>%
          tumor_var_freq = as.numeric(tumor_var_freq))
          
 REGIONVARSOM.GR<- GRanges(seqnames = Rle(REGIONVARSOM$chrom),
-                            ranges = IRanges(REGIONVARSOM$position, width=1)
-
-)
+                            ranges = IRanges(REGIONVARSOM$position, width=1))
 
 mcols(REGIONVARSOM.GR)$REF <- DNAStringSet(REGIONVARSOM$ref)
 mcols(REGIONVARSOM.GR)$ALT <- DNAStringSetList(as.list(REGIONVARSOM$var))
@@ -109,11 +107,14 @@ gg<- ggplot(REGIONVARSOM, aes(x = tumor_var_freq, y= tumor_reads1 + tumor_reads2
   geom_hline(aes(yintercept=30), color="black", linetype="dashed") +
   theme_bw()
 
-#gg
+#gg Chr18 looks like an outlier - this is reported as possible loss, and chr4 possible gain look sa little weird
 gganimate(gg)
 
 
- REGIONVARSOM %>% dplyr::select(1:11, 14:15, Symbol, tumor_var_freq) %>% arrange(desc(tumor_var_freq)) %>% filter(tumor_reads2 > 13)
+REGIONVARSOM %>% dplyr::select(1:11, 14:15, Symbol, tumor_var_freq) %>% arrange(desc(tumor_var_freq)) %>% filter(tumor_reads2 > 13)
+ 
+REGIONVARSOM %>% dplyr::select(1:11, 14:15, Symbol, tumor_var_freq) %>% arrange(desc(tumor_var_freq)) %>% filter(Symbol =="CDKN1B")
+ 
  
 ```
 

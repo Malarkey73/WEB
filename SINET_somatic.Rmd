@@ -20,6 +20,8 @@ This section merged together the files from the
 library(tidyverse)
 library(stringr)
 library(Biostrings)
+library(GenomicRanges)
+library(VariantAnnotation)
 
 PATIENTVARSOM <- list.files(pattern="_T.snp.Somatic.somaticFilter") %>% 
   sapply(read_tsv, simplify=FALSE) %>%

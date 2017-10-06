@@ -109,18 +109,19 @@ gg<- ggplot(REGIONVARSOM, aes(x = tumor_var_freq, y= tumor_reads1 + tumor_reads2
   xlab("Tumour Variant Frequency") +
   geom_hline(aes(yintercept=30), color="black", linetype="dashed") 
 
+gg + facet_wrap(~patient_id)
 
 REGIONVARSOM %>% dplyr::select(1:11, 14:15, Symbol, tumor_var_freq) %>% arrange(desc(tumor_var_freq)) %>% filter(tumor_reads2 > 13)
  
 REGIONVARSOM %>% dplyr::select(1:11, 14:15, Symbol, tumor_var_freq) %>% arrange(desc(tumor_var_freq)) %>% filter(Symbol =="CDKN1B")
 
-NREGIONS<- REGIONVARSOM %>% select(patient_id, region_id) %>% unique() %>% group_by(patient_id) %>% summarise(Nregions= n())
+NREGIONS<- REGIONVARSOM %>% dplyr::select(patient_id, region_id) %>% unique() %>% group_by(patient_id) %>% summarise(Nregions= n())
 
 REGIONVARSOM <- inner_join(REGIONVARSOM, NREGIONS)
 
 
-REGIONVARSOM  %>% filter(tumor_reads2 > 16, !is.na(Symbol)) %>% group_by(patient_id, position) %>% mutate(N=n()) %>% select(Symbol, N, Nregions) %>% unique() %>%
-  ggplot(aes(reorder(Symbol,-N), N)) +
+REGIONVARSOM  %>% filter(tumor_reads2 > 16, !is.na(Symbol)) %>% group_by(patient_id, position) %>% mutate(N=n()) %>% dplyr::select(Symbol, N, Nregions, patient_id) %>% unique() %>%
+  ggplot(aes(reorder(Symbol,-N), N, fill = patient_id)) +
   geom_bar(stat = "identity") + 
   geom_point(aes(reorder(Symbol,-N), Nregions)) +
   theme(axis.text.x=element_text(angle=45, hjust=1)) 

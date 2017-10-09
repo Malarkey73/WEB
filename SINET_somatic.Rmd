@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 The VARSCAN pipeline was largely adapted from the  
 
-This section merged together the files from the 
+This section merged together the files from the VARSCAN scripts. The code in the following section is not executed here though.
 
 ```{r dataparsing, message=FALSE, warning=FALSE, eval =FALSE}
 
@@ -88,6 +88,7 @@ write_tsv(PATIENTVARSOM, "Patient.Somatic.snp.tsv")
 rm(txdb,e2s, PATIENTVARSOM.GR, REGIONVARSOM.GR, REGIONVARSOM.ANNO, PATIENTVARSOM.ANNO)
 ```
 
+This section begin execution of code. Loading the data that was saved above.
 
 ```{r dataload, message=FALSE, warning=FALSE}
 library(tidyverse)
